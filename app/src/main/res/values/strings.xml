@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">trazartiza-app</string>
+    <string name="hello_world">Hello World!</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="conectar">Conectar con un ESP</string>
+    <string name="buscar_title">Buscar dispositivo</string>
+    <string name="buscar_bluetooth">Buscar por Bluetooth</string>
+    <string name="buscar_wifi">Buscar por Wi-Fi</string>
+    
+    <string name="dispositivo_ble">Dispositivo BLE</string>
+    <string name="dispositivo_ble_info">Información del dispositivo BLE</string>
+    <string name="dispositivo_ble_value">--</string>
+</resources>
