@@ -11,4 +11,7 @@
     <string name="dispositivo_ble">Dispositivo BLE</string>
     <string name="dispositivo_ble_info">Información del dispositivo BLE</string>
     <string name="dispositivo_ble_value">--</string>
+
+
+    <string name="logo_description">Logo de la app</string>
 </resources>

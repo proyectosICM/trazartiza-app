@@ -17,10 +17,13 @@
         android:text="@string/buscar_bluetooth"
         android:textColor="@color/white"
         android:textSize="24sp"
+        android:layout_marginTop="20dp"
+        android:drawableStart="@drawable/ic_bluetooth_24dp"
+        android:drawablePadding="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="20dp" />
+        app:layout_constraintEnd_toEndOf="parent" />
+
 
     <ProgressBar
         android:id="@+id/progressBar"

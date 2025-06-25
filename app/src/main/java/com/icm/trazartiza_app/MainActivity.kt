@@ -2,7 +2,6 @@ package com.icm.trazartiza_app
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -25,6 +24,7 @@ class MainActivity : AppCompatActivity() {
         val bluetoothButton = findViewById<MaterialButton>(R.id.button_bluetooth)
         val wifiButton = findViewById<MaterialButton>(R.id.button_wifi)
 
+        // Listener para Bluetooth
         bluetoothButton.setOnClickListener {
             val intent = Intent(this, BluetoothActivity::class.java)
             startActivity(intent)
