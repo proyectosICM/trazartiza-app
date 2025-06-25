@@ -8,8 +8,8 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class BluetoothDeviceAdapter(
-    private val devices: List<BluetoothDevice>,         // Lista de dispositivos encontrados
-    private val onItemClick: (BluetoothDevice) -> Unit  // Callback cuando se hace clic en un ítem
+    private val devices: List<BluetoothDevice>,
+    private val onItemClick: (BluetoothDevice) -> Unit
 ) : RecyclerView.Adapter<BluetoothDeviceAdapter.DeviceViewHolder>() {
 
     inner class DeviceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {

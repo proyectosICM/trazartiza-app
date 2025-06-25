@@ -30,17 +30,18 @@ class BluetoothActivity : AppCompatActivity() {
     private lateinit var bluetoothLeScanner: BluetoothLeScanner
     private val foundDevices = mutableListOf<BluetoothDevice>()
     private lateinit var progressBar: ProgressBar
+    private var isScanning = false
 
     // Launcher para pedir permisos Bluetooth o localización según la versión de Android
-    private val requestBluetoothPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            startBleScan()
-        } else {
-            Toast.makeText(this, "Permiso requerido para escanear BLE", Toast.LENGTH_SHORT).show()
+    private val requestBluetoothPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val allGranted = permissions.values.all { it }
+            if (allGranted) {
+                startBleScan()
+            } else {
+                Toast.makeText(this, "Permisos necesarios no otorgados", Toast.LENGTH_SHORT).show()
+            }
         }
-    }
 
     // Launcher para habilitar el Bluetooth si está desactivado
     private val enableBluetoothLauncher = registerForActivityResult(
@@ -96,14 +97,23 @@ class BluetoothActivity : AppCompatActivity() {
 
     // Verifica y solicita los permisos necesarios para escanear BLE
     private fun checkBluetoothPermissions() {
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Manifest.permission.BLUETOOTH_SCAN
-        } else {
-            Manifest.permission.ACCESS_FINE_LOCATION
+        val permissions = mutableListOf<String>()
+
+        // Para Android 12+ se requieren estos permisos
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
         }
 
-        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-            requestBluetoothPermissionLauncher.launch(permission)
+        // La ubicación es requerida para escaneo BLE en muchas versiones y dispositivos
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+
+        val notGranted = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (notGranted.isNotEmpty()) {
+            requestBluetoothPermissionLauncher.launch(notGranted.toTypedArray())
         } else {
             startBleScan()
         }
@@ -112,6 +122,10 @@ class BluetoothActivity : AppCompatActivity() {
     // Inicia el escaneo de dispositivos BLE
     @Suppress("MissingPermission")
     private fun startBleScan() {
+        if (isScanning) return // Previene escaneo duplicado
+
+        isScanning = true
+
         foundDevices.clear()
         bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
 
@@ -144,7 +158,18 @@ class BluetoothActivity : AppCompatActivity() {
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Toast.makeText(this@BluetoothActivity, "Error en escaneo BLE: $errorCode", Toast.LENGTH_SHORT).show()
+            val errorMsg = when (errorCode) {
+                ScanCallback.SCAN_FAILED_ALREADY_STARTED -> "Escaneo ya iniciado"
+                ScanCallback.SCAN_FAILED_APPLICATION_REGISTRATION_FAILED -> "Registro fallido"
+                ScanCallback.SCAN_FAILED_INTERNAL_ERROR -> "Error interno"
+                ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED -> "BLE no soportado"
+                else -> "Error desconocido"
+            }
+
+            // Solo mostrar si realmente no hay dispositivos encontrados
+            if (foundDevices.isEmpty()) {
+                Toast.makeText(this@BluetoothActivity, "Error en escaneo BLE: $errorMsg", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -185,6 +210,7 @@ class BluetoothActivity : AppCompatActivity() {
         // Detiene el escaneo al salir de la pantalla
         if (::bluetoothLeScanner.isInitialized) {
             bluetoothLeScanner.stopScan(leScanCallback)
+            isScanning = false
         }
         progressBar.visibility = View.GONE
     }
