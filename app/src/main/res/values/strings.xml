@@ -14,4 +14,7 @@
 
 
     <string name="logo_description">Logo de la app</string>
+    <string name="valor_minimo">Valor mínimo: </string>
+    <string name="valor_maximo">Valor máximo: </string>
+    <string name="enviar">Enviar </string>
 </resources>

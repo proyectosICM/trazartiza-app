@@ -27,14 +27,16 @@ class WifiActivity : AppCompatActivity() {
             insets
         }
 
+        // Configuración del RecyclerView y su adaptador
         recyclerView = findViewById(R.id.deviceRecyclerView)
         adapter = WifiDeviceAdapter(foundDevices) { ip ->
             Toast.makeText(this, "Dispositivo encontrado: $ip", Toast.LENGTH_SHORT).show()
-            // Aquí más adelante puedes conectarte al ESP
+            // TODO: Aquí más adelante realizar la conexiòn al ESP
         }
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
+        // Inicializa el escáner de red local
         val scanner = NetworkScanner(this) { ip ->
             runOnUiThread {
                 if (!foundDevices.contains(ip)) {

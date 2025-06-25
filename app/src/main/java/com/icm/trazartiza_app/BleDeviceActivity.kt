@@ -14,11 +14,12 @@ import com.google.android.material.textfield.TextInputEditText
 import java.util.*
 
 class BleDeviceActivity : AppCompatActivity() {
-
+    // Referencias al GATT y dispositivo conectado
     private var gatt: BluetoothGatt? = null
     private var device: BluetoothDevice? = null
     private lateinit var valueTextView: TextView
 
+    // UUID del servicio y característica que se quiere usar
     private val targetServiceUUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
     private val targetCharacteristicUUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8")
 
@@ -33,11 +34,14 @@ class BleDeviceActivity : AppCompatActivity() {
             insets
         }
 
+        // Inicializa la vista donde se muestra el valor recibido
         valueTextView = findViewById(R.id.device_value)
 
+        // Obtiene las referencias del dispositivo y conexión activa desde el ConnectionManager
         gatt = BleConnectionManager.connectedGatt
         device = BleConnectionManager.connectedDevice
 
+        // Si no hay conexión activa, muestra mensaje y cierra la actividad
         if (gatt == null || device == null) {
             Toast.makeText(this, "No hay dispositivo conectado", Toast.LENGTH_LONG).show()
             finish()
@@ -46,21 +50,22 @@ class BleDeviceActivity : AppCompatActivity() {
 
         Toast.makeText(this, "Conectado a ${device?.name}", Toast.LENGTH_SHORT).show()
 
-        // ✅ Callback para mostrar valor leído
+        // Callback para mostrar en pantalla el valor recibido del BLE
         BleConnectionManager.onValueRead = { value ->
             runOnUiThread {
                 valueTextView.text = "Valor recibido: $value"
             }
         }
 
+        // Habilita la recepción de notificaciones del BLE
         enableNotification()
 
-        // ✅ Referencias a los inputs y botón
+        // Referencias a los campos de texto y botón
         val inputMin = findViewById<TextInputEditText>(R.id.input_min)
         val inputMax = findViewById<TextInputEditText>(R.id.input_max)
         val btnEnviar = findViewById<MaterialButton>(R.id.btn_enviar)
 
-        // ✅ Acción al presionar ENVIAR
+        // Acción del botón "Enviar": valida e intenta mandar los valores por BLE
         btnEnviar.setOnClickListener {
             val minText = inputMin.text.toString().trim()
             val maxText = inputMax.text.toString().trim()
@@ -78,6 +83,7 @@ class BleDeviceActivity : AppCompatActivity() {
         }
     }
 
+    // Habilita notificaciones BLE para la característica definida
     private fun enableNotification() {
         val service = gatt?.getService(targetServiceUUID)
         if (service == null) {
@@ -105,6 +111,7 @@ class BleDeviceActivity : AppCompatActivity() {
             return
         }
 
+        // Habilita notificaciones a través del descriptor estándar
         val descriptor = characteristic.getDescriptor(
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         )
@@ -114,6 +121,7 @@ class BleDeviceActivity : AppCompatActivity() {
         println("✅ Notificaciones habilitadas: $result")
     }
 
+    // Envía un mensaje en forma de texto por BLE a la característica indicada
     private fun sendMessageOverBle(message: String) {
         val service = gatt?.getService(targetServiceUUID)
         val characteristic = service?.getCharacteristic(targetCharacteristicUUID)
@@ -123,6 +131,7 @@ class BleDeviceActivity : AppCompatActivity() {
             return
         }
 
+        // Verifica que la característica sea escribible
         val props = characteristic.properties
         if (props and BluetoothGattCharacteristic.PROPERTY_WRITE == 0 &&
             props and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE == 0
@@ -131,6 +140,7 @@ class BleDeviceActivity : AppCompatActivity() {
             return
         }
 
+        // Escribe el mensaje como bytes UTF-8
         characteristic.value = message.toByteArray(Charsets.UTF_8)
         val success = gatt?.writeCharacteristic(characteristic) ?: false
 
@@ -141,6 +151,7 @@ class BleDeviceActivity : AppCompatActivity() {
         }
     }
 
+    // Al presionar atrás, pregunta al usuario si desea desconectar el BLE
     override fun onBackPressed() {
         AlertDialog.Builder(this)
             .setTitle("¿Cerrar conexión?")
@@ -157,6 +168,7 @@ class BleDeviceActivity : AppCompatActivity() {
             .show()
     }
 
+    // Limpia el callback al destruir la actividad
     override fun onDestroy() {
         super.onDestroy()
         BleConnectionManager.onValueRead = null

@@ -10,6 +10,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,7 +29,9 @@ class BluetoothActivity : AppCompatActivity() {
     private lateinit var deviceListAdapter: BluetoothDeviceAdapter
     private lateinit var bluetoothLeScanner: BluetoothLeScanner
     private val foundDevices = mutableListOf<BluetoothDevice>()
+    private lateinit var progressBar: ProgressBar
 
+    // Launcher para pedir permisos Bluetooth o localización según la versión de Android
     private val requestBluetoothPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -38,6 +42,7 @@ class BluetoothActivity : AppCompatActivity() {
         }
     }
 
+    // Launcher para habilitar el Bluetooth si está desactivado
     private val enableBluetoothLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -53,33 +58,43 @@ class BluetoothActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_bluetooth)
 
+        // Inicializa la barra de progreso y la oculta inicialmente
+        progressBar = findViewById(R.id.progressBar)
+        progressBar.visibility = View.GONE
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
+        // Obtiene el adaptador Bluetooth del dispositivo
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
 
+        // Verifica si el dispositivo soporta Bluetooth
         if (bluetoothAdapter == null) {
             Toast.makeText(this, "Bluetooth no soportado", Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
+        // Si el Bluetooth está apagado, solicita al usuario que lo active
         if (!bluetoothAdapter.isEnabled) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             enableBluetoothLauncher.launch(enableBtIntent)
             return
         }
 
+        // Configura el RecyclerView
         recyclerView = findViewById(R.id.bluetoothDevicesRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
+        // Verifica permisos y, si están otorgados, inicia el escaneo BLE
         checkBluetoothPermissions()
     }
 
+    // Verifica y solicita los permisos necesarios para escanear BLE
     private fun checkBluetoothPermissions() {
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Manifest.permission.BLUETOOTH_SCAN
@@ -94,20 +109,28 @@ class BluetoothActivity : AppCompatActivity() {
         }
     }
 
+    // Inicia el escaneo de dispositivos BLE
     @Suppress("MissingPermission")
     private fun startBleScan() {
         foundDevices.clear()
         bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
 
         Toast.makeText(this, "Buscando dispositivos BLE...", Toast.LENGTH_SHORT).show()
+
+        progressBar.visibility = View.VISIBLE
+
         bluetoothLeScanner.startScan(leScanCallback)
 
+        // Detiene el escaneo automáticamente después de 10 segundos
         recyclerView.postDelayed({
             bluetoothLeScanner.stopScan(leScanCallback)
             Toast.makeText(this, "Escaneo finalizado", Toast.LENGTH_SHORT).show()
+
+            progressBar.visibility = View.GONE
         }, 10000)
     }
 
+    // Callback para manejar los resultados del escaneo BLE
     private val leScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
@@ -125,13 +148,15 @@ class BluetoothActivity : AppCompatActivity() {
         }
     }
 
+    // Establece conexión con el dispositivo seleccionado
     @Suppress("MissingPermission")
     private fun connectToBLEDevice(device: BluetoothDevice) {
         Toast.makeText(this, "Conectando a ${device.name ?: "Sin nombre"}...", Toast.LENGTH_SHORT).show()
 
+        // Guarda el dispositivo conectado en un gestor global (BleConnectionManager)
         BleConnectionManager.connectedDevice = device
 
-        // ✅ Definir acción al descubrir servicios BLE
+        // Define la acción a realizar al conectarse correctamente (abrir nueva pantalla)
         BleConnectionManager.onConnected = {
             runOnUiThread {
                 val intent = Intent(this, BleDeviceActivity::class.java)
@@ -139,11 +164,28 @@ class BluetoothActivity : AppCompatActivity() {
             }
         }
 
-        // ✅ Usar el callback centralizado
+        /// Inicia la conexión GATT con el dispositivo
         BleConnectionManager.connectedGatt = device.connectGatt(
             this,
             false,
             BleConnectionManager.gattCallback
         )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Al volver a la pantalla: limpia la lista y reinicia el escaneo
+        foundDevices.clear()
+        recyclerView.adapter = null
+        checkBluetoothPermissions()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Detiene el escaneo al salir de la pantalla
+        if (::bluetoothLeScanner.isInitialized) {
+            bluetoothLeScanner.stopScan(leScanCallback)
+        }
+        progressBar.visibility = View.GONE
     }
 }
